@@ -330,7 +330,7 @@
   </div>
 
   <!-- FFmpeg WASM 核心库（本地文件） -->
-  <script src="./core/ffmpeg.min.js"></script>
+  <script src="./hebin/core/ffmpeg.min.js"></script>
 
   <script>
     const { createFFmpeg, fetchFile } = FFmpeg;
@@ -451,7 +451,7 @@
 
         // 加载内核，指定本地路径
         await ffmpeg.load({
-          corePath: "./core/ffmpeg-core.js"
+          corePath: "./hebin/core/ffmpeg-core.js"
         });
 
         addLog("FFmpeg 内核加载成功！", "success");
