@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B站视频下载器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1677ff;
+            --primary-light: #4096ff;
+            --primary-dark: #0958d9;
+            --primary-bg: #e6f4ff;
+            --success: #52c41a;
+            --warning: #faad14;
+            --error: #ff4d4f;
+            --text-primary: #1f1f1f;
+            --text-secondary: #595959;
+            --text-tertiary: #8c8c8c;
+            --border: #d9d9d9;
+            --bg: #f5f7fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #1677ff 0%, #0958d9 100%);
+            border-radius: 16px;
+            color: white;
+            box-shadow: 0 4px 20px rgba(22, 119, 255, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-header::before {
+            content: '';
+            width: 3px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        /* 搜索区域 */
+        .search-section {
+            margin-bottom: 24px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .input-wrapper .icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+            font-size: 16px;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 12px 16px 12px 42px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+            outline: none;
+            background: white;
+        }
+
+        .text-input:hover {
+            border-color: var(--primary-light);
+        }
+
+        .text-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+        }
+
+        .btn-primary:active {
+            background: var(--primary-dark);
+        }
+
+        .btn-primary:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #73d13d;
+        }
+
+        .btn-success:disabled {
+            background: #b7eb8f;
+            cursor: not-allowed;
+        }
+
+        .cookie-section {
+            margin-top: 16px;
+        }
+
+        .cookie-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .tip-box {
+            background: var(--primary-bg);
+            border: 1px solid #91caff;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 16px;
+            font-size: 13px;
+            color: var(--primary-dark);
+            line-height: 1.6;
+        }
+
+        .tip-box strong {
+            color: var(--primary-dark);
+        }
+
+        .tip-box code {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Consolas, Monaco, monospace;
+            font-size: 12px;
+        }
+
+        /* 加载状态 */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f0f0f0;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 视频信息 */
+        .video-info-section {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+        }
+
+        .video-cover-wrapper {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .video-cover {
+            width: 280px;
+            height: 175px;
+            object-fit: cover;
+            border-radius: 8px;
+            background: #f0f0f0;
+        }
+
+        .video-cover-fallback {
+            width: 280px;
+            height: 175px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #e6f4ff 0%, #91caff 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 48px;
+        }
+
+        .video-duration {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .video-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .video-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.4;
+            margin-bottom: 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .up-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding: 10px 14px;
+            background: #fafafa;
+            border-radius: 8px;
+        }
+
+        .up-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+
+        .up-avatar-fallback {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1677ff 0%, #0958d9 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .up-name {
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .up-tag {
+            font-size: 11px;
+            color: var(--primary);
+            background: var(--primary-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+        }
+
+        .video-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        /* 分P选择 */
+        .pages-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .page-item {
+            padding: 8px 14px;
+            background: #fafafa;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .page-item:hover {
+            border-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .page-item.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* 画质选择 */
+        .quality-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .quality-item {
+            padding: 16px 12px;
+            background: #fafafa;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .quality-item:hover:not(.locked) {
+            border-color: var(--primary-light);
+            background: var(--primary-bg);
+        }
+
+        .quality-item.active {
+            border-color: var(--primary);
+            background: var(--primary-bg);
+        }
+
+        .quality-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .quality-item.active .quality-name {
+            color: var(--primary);
+        }
+
+        .quality-desc {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .quality-item.locked {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .quality-item.locked::after {
+            content: '🔒';
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            font-size: 12px;
+        }
+
+        /* 下载区域 */
+        .download-section {
+            display: flex;
+            gap: 12px;
+        }
+
+        .download-btn {
+            flex: 1;
+            padding: 14px 24px;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .download-btn.audio {
+            background: linear-gradient(135deg, #722ed1 0%, #531dab 100%);
+        }
+
+        .download-btn.audio:hover {
+            background: linear-gradient(135deg, #9254de 0%, #722ed1 100%);
+        }
+
+        .download-btn.audio:disabled {
+            background: #d3adf7;
+            cursor: not-allowed;
+        }
+
+        .download-note {
+            margin-top: 16px;
+            padding: 12px 16px;
+            background: #fffbe6;
+            border: 1px solid #ffe58f;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #d48806;
+            line-height: 1.7;
+        }
+
+        .download-note strong {
+            color: #d46b08;
+        }
+
+        /* 错误信息 */
+        .error-message {
+            background: #fff2f0;
+            border: 1px solid #ffccc7;
+            color: #cf1322;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        /* 底部工具链接 */
+        .tools-section {
+            margin-top: 32px;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .tool-card {
+            padding: 20px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s;
+            display: block;
+        }
+
+        .tool-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(22, 119, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .tool-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--primary-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        .tool-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .tool-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .tool-link {
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-tertiary);
+            font-size: 12px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .header {
+                padding: 30px 16px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .video-info-section {
+                flex-direction: column;
+            }
+
+            .video-cover {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 16/9;
+            }
+
+            .video-cover-fallback {
+                width: 100%;
+                aspect-ratio: 16/9;
+                height: auto;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .quality-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .download-section {
+                flex-direction: column;
+            }
+
+            .card-body {
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .quality-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .video-stats {
+                gap: 12px;
+            }
+
+            .stat-value {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 B站视频下载器</h1>
+            <p>支持全画质解析 · WBI 签名适配 · 简单易用</p>
+        </div>
+
+        <!-- 搜索区域 -->
+        <div class="card search-section">
+            <div class="card-header">视频解析</div>
+            <div class="card-body">
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <span class="icon">🔗</span>
+                        <input 
+                            type="text" 
+                            id="bvidInput" 
+                            class="text-input" 
+                            placeholder="输入 BV 号或视频链接，例如：BV1GJ411x7h7"
+                        >
+                    </div>
+                    <button id="parseBtn" class="btn btn-primary" onclick="parseVideo()">
+                        🔍 解析视频
+                    </button>
+                </div>
+
+                <div class="cookie-section">
+                    <label class="cookie-label">Cookie（可选，用于获取会员画质）</label>
+                    <div class="input-wrapper">
+                        <span class="icon">🍪</span>
+                        <input 
+                            type="text" 
+                            id="cookieInput" 
+                            class="text-input" 
+                            placeholder="粘贴你的 B 站 Cookie，获取更高画质"
+                        >
+                    </div>
+                </div>
+
+                <div class="tip-box">
+                    <strong>💡 提示：</strong>
+                    DASH 格式音视频分离，下载后需要合并。推荐使用 <code>ffmpeg -i video.m4s -i audio.m4s -c copy output.mp4</code> 合并
+                </div>
+            </div>
+        </div>
+
+        <div id="resultContainer">
+            <!-- 结果将在这里显示 -->
+        </div>
+
+        <!-- 工具链接 -->
+        <div class="tools-section">
+            <div class="card">
+                <div class="card-header">相关工具</div>
+                <div class="card-body">
+                    <div class="tools-grid">
+                        <a href="/app/install-bilid.exe" class="tool-card" download>
+                            <div class="tool-icon">⚡</div>
+                            <div class="tool-title">Bilid 转换器</div>
+                            <div class="tool-desc">本地视频转换工具，支持音视频合并、格式转换</div>
+                            <div class="tool-link">立即下载 →</div>
+                        </a>
+                        <a href="https://snapany.com/zh/bilibili" target="_blank" rel="noopener noreferrer" class="tool-card">
+                            <div class="tool-icon">🌐</div>
+                            <div class="tool-title">SnapAny 在线解析</div>
+                            <div class="tool-desc">在线 B 站视频解析工具，支持多平台下载</div>
+                            <div class="tool-link">访问网站 →</div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            仅供个人学习使用 · 请尊重版权 · 请勿用于商业用途
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let currentVideoInfo = null;
+        let currentPlayUrl = null;
+        let selectedPage = 1;
+        let selectedQuality = null;
+
+        // 画质映射
+        const qualityMap = {
+            16: { name: '360P', desc: '流畅' },
+            32: { name: '480P', desc: '清晰' },
+            64: { name: '720P', desc: '高清' },
+            74: { name: '720P60', desc: '高清60帧' },
+            80: { name: '1080P', desc: '超清' },
+            112: { name: '1080P+', desc: '超清+' },
+            116: { name: '1080P60', desc: '超清60帧' },
+            120: { name: '4K', desc: '极清' },
+            125: { name: 'HDR', desc: '真彩' },
+            126: { name: '杜比视界', desc: '杜比' },
+            127: { name: '8K', desc: '超高清' }
+        };
+
+        // 格式化数字
+        function formatNumber(num) {
+            if (num >= 10000) {
+                return (num / 10000).toFixed(1) + '万';
+            }
+            return num.toString();
+        }
+
+        // 格式化时长
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // 提取BV号
+        function extractBvid(input) {
+            const match = input.match(/BV[a-zA-Z0-9]+/);
+            return match ? match[0] : input.trim();
+        }
+
+        // 图片代理（解决防盗链）
+        function proxyImage(url) {
+            if (!url) return '';
+            // 使用图片代理服务解决B站防盗链问题
+            const encodedUrl = encodeURIComponent(url.replace(/^http:/, 'https:'));
+            return `https://images.weserv.nl/?url=${encodedUrl}&w=560&q=80&output=webp`;
+        }
+
+        // 显示加载状态
+        function showLoading() {
+            document.getElementById('resultContainer').innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            <p>正在解析视频信息...</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 显示错误
+        function showError(message) {
+            document.getElementById('resultContainer').innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <div class="error-message">
+                            ❌ ${message}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 解析视频
+        async function parseVideo() {
+            const input = document.getElementById('bvidInput').value.trim();
+            const cookie = document.getElementById('cookieInput').value.trim();
+
+            if (!input) {
+                alert('请输入 BV 号或视频链接');
+                return;
+            }
+
+            const bvid = extractBvid(input);
+            const btn = document.getElementById('parseBtn');
+            btn.disabled = true;
+            btn.textContent = '解析中...';
+
+            showLoading();
+
+            try {
+                // 获取视频信息
+                const infoUrl = `${API_BASE}/video/info?bvid=${encodeURIComponent(bvid)}${cookie ? '&cookie=' + encodeURIComponent(cookie) : ''}`;
+                const infoResponse = await fetch(infoUrl);
+                const infoData = await infoResponse.json();
+
+                if (infoData.code !== 0) {
+                    throw new Error(infoData.message || '获取视频信息失败');
+                }
+
+                currentVideoInfo = infoData.data;
+                selectedPage = 1;
+                selectedQuality = null;
+
+                // 获取第一P的播放地址
+                await loadPlayUrl(bvid, currentVideoInfo.pages[0].cid, 80, cookie);
+
+                // 渲染视频信息
+                renderVideoInfo();
+
+            } catch (error) {
+                console.error('解析失败:', error);
+                showError(error.message || '解析失败，请检查 BV 号是否正确');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔍 解析视频';
+            }
+        }
+
+        // 加载播放地址
+        async function loadPlayUrl(bvid, cid, qn, cookie = '') {
+            const url = `${API_BASE}/video/playurl?bvid=${encodeURIComponent(bvid)}&cid=${cid}&qn=${qn}${cookie ? '&cookie=' + encodeURIComponent(cookie) : ''}`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.code !== 0) {
+                throw new Error(data.message || '获取播放地址失败');
+            }
+
+            currentPlayUrl = data.data;
+            return data.data;
+        }
+
+        // 渲染视频信息
+        function renderVideoInfo() {
+            const video = currentVideoInfo;
+            const container = document.getElementById('resultContainer');
+
+            // 可用画质列表
+            const acceptQualities = currentPlayUrl.acceptQuality || [];
+
+            const coverUrl = proxyImage(video.pic);
+            const avatarUrl = proxyImage(video.owner.face);
+            const upInitial = video.owner.name ? video.owner.name.charAt(0).toUpperCase() : 'U';
+
+            container.innerHTML = `
+                <!-- 视频信息 -->
+                <div class="card">
+                    <div class="card-header">视频信息</div>
+                    <div class="card-body">
+                        <div class="video-info-section">
+                            <div class="video-cover-wrapper">
+                                <img 
+                                    src="${coverUrl}" 
+                                    alt="${video.title}" 
+                                    class="video-cover"
+                                    referrerpolicy="no-referrer"
+                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                >
+                                <div class="video-cover-fallback" style="display: none;">🎬</div>
+                                <span class="video-duration">${formatDuration(video.duration)}</span>
+                            </div>
+                            <div class="video-details">
+                                <h2 class="video-title">${video.title}</h2>
+                                <div class="up-info">
+                                    <img 
+                                        src="${avatarUrl}" 
+                                        alt="${video.owner.name}" 
+                                        class="up-avatar"
+                                        referrerpolicy="no-referrer"
+                                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                    >
+                                    <div class="up-avatar-fallback" style="display: none;">${upInitial}</div>
+                                    <span class="up-name">${video.owner.name}</span>
+                                    <span class="up-tag">UP主</span>
+                                </div>
+                                <div class="video-stats">
+                                    <div class="stat-item">
+                                        <span class="stat-value">${formatNumber(video.stat.view)}</span>
+                                        <span class="stat-label">播放</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-value">${formatNumber(video.stat.reply)}</span>
+                                        <span class="stat-label">评论</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-value">${formatNumber(video.stat.favorite)}</span>
+                                        <span class="stat-label">收藏</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-value">${formatNumber(video.stat.coin)}</span>
+                                        <span class="stat-label">硬币</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-value">${formatNumber(video.stat.like)}</span>
+                                        <span class="stat-label">点赞</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-value">${formatDuration(video.duration)}</span>
+                                        <span class="stat-label">时长</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${video.pages.length > 1 ? `
+                <!-- 分P选择 -->
+                <div class="card">
+                    <div class="card-header">分P选择</div>
+                    <div class="card-body">
+                        <div class="pages-list">
+                            ${video.pages.map((page, index) => `
+                                <div class="page-item ${index + 1 === selectedPage ? 'active' : ''}" 
+                                     onclick="selectPage(${index + 1}, ${page.cid})">
+                                    P${page.page} ${page.part}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- 画质选择 -->
+                <div class="card">
+                    <div class="card-header">选择画质</div>
+                    <div class="card-body">
+                        <div class="quality-grid" id="qualityGrid">
+                            ${Object.keys(qualityMap).map(qn => {
+                                const qnNum = parseInt(qn);
+                                const isAvailable = acceptQualities.includes(qnNum);
+                                const isActive = selectedQuality === qnNum;
+                                return `
+                                    <div class="quality-item ${isActive ? 'active' : ''} ${!isAvailable ? 'locked' : ''}"
+                                         onclick="${isAvailable ? `selectQuality(${qn})` : ''}"
+                                         title="${!isAvailable ? '该画质不可用，可能需要登录或大会员' : ''}">
+                                        <div class="quality-name">${qualityMap[qn].name}</div>
+                                        <div class="quality-desc">${qualityMap[qn].desc}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 下载 -->
+                <div class="card">
+                    <div class="card-header">下载</div>
+                    <div class="card-body">
+                        <div class="download-section">
+                            <button class="btn btn-success download-btn" id="downloadVideoBtn" onclick="downloadVideo()" disabled>
+                                📹 下载视频
+                            </button>
+                            <button class="btn download-btn audio" id="downloadAudioBtn" onclick="downloadAudio()" disabled>
+                                🎵 下载音频
+                            </button>
+                        </div>
+                        <div class="download-note">
+                            <strong>📌 说明：</strong>
+                            <div style="margin-top: 6px;">
+                                • DASH 格式音视频分离，下载后需自行合并<br>
+                                • 文件名格式：UP主名 - 视频标题<br>
+                                • 高画质需要登录 Cookie 才能获取
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 选择分P
+        async function selectPage(page, cid) {
+            selectedPage = page;
+            selectedQuality = null;
+            
+            // 更新选中状态
+            document.querySelectorAll('.page-item').forEach((item, index) => {
+                item.classList.toggle('active', index + 1 === page);
+            });
+
+            // 禁用下载按钮
+            document.getElementById('downloadVideoBtn').disabled = true;
+            document.getElementById('downloadAudioBtn').disabled = true;
+
+            // 重置画质选中状态
+            document.querySelectorAll('.quality-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // 重新加载播放地址
+            try {
+                const bvid = currentVideoInfo.bvid;
+                const cookie = document.getElementById('cookieInput').value.trim();
+                await loadPlayUrl(bvid, cid, 80, cookie);
+                
+                // 更新画质可用状态
+                const acceptQualities = currentPlayUrl.acceptQuality || [];
+                document.querySelectorAll('.quality-item').forEach((item, index) => {
+                    const qnKeys = Object.keys(qualityMap);
+                    const qnNum = parseInt(qnKeys[index]);
+                    const isAvailable = acceptQualities.includes(qnNum);
+                    item.classList.toggle('locked', !isAvailable);
+                });
+
+            } catch (error) {
+                alert('加载失败：' + error.message);
+            }
+        }
+
+        // 选择画质
+        async function selectQuality(qn) {
+            selectedQuality = qn;
+
+            // 更新选中状态
+            document.querySelectorAll('.quality-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            // 加载该画质的播放地址
+            try {
+                const bvid = currentVideoInfo.bvid;
+                const cid = currentVideoInfo.pages[selectedPage - 1].cid;
+                const cookie = document.getElementById('cookieInput').value.trim();
+                
+                await loadPlayUrl(bvid, cid, qn, cookie);
+                
+                // 启用下载按钮
+                document.getElementById('downloadVideoBtn').disabled = false;
+                document.getElementById('downloadAudioBtn').disabled = false;
+
+            } catch (error) {
+                alert('获取该画质失败：' + error.message);
+            }
+        }
+
+        // 生成安全的文件名
+        function sanitizeFilename(name) {
+            return name.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim();
+        }
+
+        // 下载视频
+        function downloadVideo() {
+            if (!currentPlayUrl || !currentPlayUrl.videos || currentPlayUrl.videos.length === 0) {
+                alert('没有可用的视频流');
+                return;
+            }
+
+            const videoUrl = currentPlayUrl.videos[0].baseUrl;
+            const qualityName = qualityMap[selectedQuality]?.name || 'video';
+            const upName = sanitizeFilename(currentVideoInfo.owner.name || 'unknown');
+            const videoTitle = sanitizeFilename(currentVideoInfo.title || 'video');
+            const fileName = `${upName} - ${videoTitle}_${qualityName}.mp4`;
+            
+            // 使用后端代理下载（解决防盗链问题）
+            const downloadUrl = `${API_BASE}/video/download?url=${encodeURIComponent(videoUrl)}&filename=${encodeURIComponent(fileName)}&type=video`;
+            
+            // 创建下载链接
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = fileName;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // 下载音频
+        function downloadAudio() {
+            if (!currentPlayUrl || !currentPlayUrl.audios || currentPlayUrl.audios.length === 0) {
+                alert('没有可用的音频流');
+                return;
+            }
+
+            const audioUrl = currentPlayUrl.audios[0].baseUrl;
+            const upName = sanitizeFilename(currentVideoInfo.owner.name || 'unknown');
+            const videoTitle = sanitizeFilename(currentVideoInfo.title || 'video');
+            const fileName = `${upName} - ${videoTitle}_audio.m4a`;
+            
+            // 使用后端代理下载（解决防盗链问题）
+            const downloadUrl = `${API_BASE}/video/download?url=${encodeURIComponent(audioUrl)}&filename=${encodeURIComponent(fileName)}&type=audio`;
+            
+            // 创建下载链接
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = fileName;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // 回车触发解析
+        document.getElementById('bvidInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                parseVideo();
+            }
+        });
+    </script>
+</body>
+</html>
