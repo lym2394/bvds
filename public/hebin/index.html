@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FFmpeg WASM 音视频合并工具</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft Yahei", sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #0066cc 0%, #0099ff 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title .icon {
+      width: 24px;
+      height: 24px;
+      background: #0066cc;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      border: 2px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 24px;
+      text-align: center;
+      transition: all 0.3s;
+      cursor: pointer;
+      background: #f8fafc;
+    }
+
+    .file-input-wrapper:hover {
+      border-color: #0066cc;
+      background: #f0f7ff;
+    }
+
+    .file-input-wrapper.dragover {
+      border-color: #0066cc;
+      background: #e0f0ff;
+    }
+
+    .file-input-wrapper input[type="file"] {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .file-icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+
+    .file-hint {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .file-name {
+      margin-top: 10px;
+      color: #0066cc;
+      font-weight: 500;
+      word-break: break-all;
+    }
+
+    .progress-section {
+      margin: 24px 0;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 28px;
+      background: #e2e8f0;
+      border-radius: 14px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #0066cc 0%, #0099ff 100%);
+      transition: width 0.2s ease;
+      border-radius: 14px;
+    }
+
+    .progress-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    }
+
+    .action-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #0066cc 0%, #0099ff 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .action-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 102, 204, 0.4);
+    }
+
+    .action-btn:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    .log-section {
+      margin-top: 24px;
+    }
+
+    .log-box {
+      background: #0f172a;
+      color: #94a3b8;
+      padding: 16px;
+      border-radius: 10px;
+      font-family: "Consolas", "Monaco", monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      max-height: 240px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .log-box .log-info {
+      color: #60a5fa;
+    }
+
+    .log-box .log-success {
+      color: #4ade80;
+    }
+
+    .log-box .log-error {
+      color: #f87171;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-left: 10px;
+    }
+
+    .status-loading {
+      background: #fef3c7;
+      color: #d97706;
+    }
+
+    .status-ready {
+      background: #dcfce7;
+      color: #16a34a;
+    }
+
+    .info-card {
+      background: #f0f9ff;
+      border-left: 4px solid #0066cc;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .info-card h3 {
+      color: #0066cc;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .info-card ul {
+      color: #475569;
+      font-size: 13px;
+      padding-left: 20px;
+    }
+
+    .info-card li {
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 600px) {
+      .content {
+        padding: 20px;
+      }
+      .header h1 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎬 FFmpeg WASM 音视频合并工具</h1>
+      <p>纯浏览器本地运行 · 无需安装 · 文件不上传服务器</p>
+    </div>
+
+    <div class="content">
+      <div class="info-card">
+        <h3>📌 使用说明</h3>
+        <ul>
+          <li>请将本 HTML 文件与 core 文件夹放在同一目录下</li>
+          <li>仅支持 MP4 视频 + MP3 音频合并，视频流直接复制，速度快</li>
+          <li>所有处理均在浏览器本地完成，保护您的隐私安全</li>
+          <li>音视频时长建议保持一致，音频较短会导致后半段无声</li>
+          <li>建议使用本地 HTTP 服务打开，避免浏览器安全限制</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <span class="icon">1</span>
+          选择 MP4 视频文件
+          <span id="videoStatus" class="status-badge status-loading">未选择</span>
+        </div>
+        <div class="file-input-wrapper" id="videoDrop">
+          <input type="file" id="videoInput" accept=".mp4" />
+          <div class="file-icon">🎥</div>
+          <div class="file-hint">点击选择或拖拽 MP4 视频文件到此处</div>
+          <div class="file-name" id="videoName"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">
+          <span class="icon">2</span>
+          选择 MP3 音频文件
+          <span id="audioStatus" class="status-badge status-loading">未选择</span>
+        </div>
+        <div class="file-input-wrapper" id="audioDrop">
+          <input type="file" id="audioInput" accept=".mp3" />
+          <div class="file-icon">🎵</div>
+          <div class="file-hint">点击选择或拖拽 MP3 音频文件到此处</div>
+          <div class="file-name" id="audioName"></div>
+        </div>
+      </div>
+
+      <button class="action-btn" id="startBtn" disabled>
+        正在加载 FFmpeg 内核...
+      </button>
+
+      <div class="progress-section">
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="progressBar"></div>
+          <div class="progress-text" id="progressText">0%</div>
+        </div>
+      </div>
+
+      <div class="log-section">
+        <div class="section-title">
+          <span class="icon">📋</span>
+          运行日志
+        </div>
+        <div class="log-box" id="logBox">等待 FFmpeg 内核加载...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FFmpeg WASM 核心库（本地文件） -->
+  <script src="./core/ffmpeg.min.js"></script>
+
+  <script>
+    const { createFFmpeg, fetchFile } = FFmpeg;
+
+    const ffmpeg = createFFmpeg({ log: false });
+    const logBox = document.getElementById("logBox");
+    const startBtn = document.getElementById("startBtn");
+    const progressBar = document.getElementById("progressBar");
+    const progressText = document.getElementById("progressText");
+    const videoInput = document.getElementById("videoInput");
+    const audioInput = document.getElementById("audioInput");
+    const videoName = document.getElementById("videoName");
+    const audioName = document.getElementById("audioName");
+    const videoStatus = document.getElementById("videoStatus");
+    const audioStatus = document.getElementById("audioStatus");
+
+    let videoFile = null;
+    let audioFile = null;
+    let totalDuration = 0;
+    let isProcessing = false;
+
+    // 日志输出函数
+    function addLog(msg, type = "") {
+      const time = new Date().toLocaleTimeString();
+      const prefix = type ? `<span class="log-${type}">[${type.toUpperCase()}]</span> ` : "";
+      logBox.innerHTML += `\n${prefix}${msg}`;
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    // 重置进度条
+    function resetProgress() {
+      progressBar.style.width = "0%";
+      progressText.textContent = "0%";
+      totalDuration = 0;
+    }
+
+    // 更新进度条
+    function updateProgress(currentSec) {
+      if (totalDuration <= 0) return;
+      const percent = Math.min(100, Math.round((currentSec / totalDuration) * 100));
+      progressBar.style.width = `${percent}%`;
+      progressText.textContent = `${percent}% (${currentSec.toFixed(1)}s / ${totalDuration.toFixed(1)}s)`;
+    }
+
+    // 解析时间字符串为秒数
+    function parseTime(timeStr) {
+      const parts = timeStr.split(":");
+      const h = parseFloat(parts[0]);
+      const m = parseFloat(parts[1]);
+      const s = parseFloat(parts[2]);
+      return h * 3600 + m * 60 + s;
+    }
+
+    // 拖拽上传支持
+    function setupDragDrop(dropId, inputId, type) {
+      const dropZone = document.getElementById(dropId);
+      const input = document.getElementById(inputId);
+
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+      });
+
+      dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+      });
+
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          input.files = files;
+          input.dispatchEvent(new Event("change"));
+        }
+      });
+    }
+
+    // 加载 FFmpeg 内核
+    async function loadFFmpeg() {
+      addLog("正在加载本地 FFmpeg WASM 内核...", "info");
+      addLog("内核文件位于同目录 core 文件夹中", "info");
+
+      try {
+        // 设置日志回调
+        ffmpeg.setLogger(({ type, message }) => {
+          // 提取总时长
+          const durMatch = message.match(/Duration:\s*(\d{2}:\d{2}:\d{2}\.\d+)/);
+          if (durMatch && totalDuration === 0) {
+            totalDuration = parseTime(durMatch[1]);
+            addLog(`检测到视频总时长: ${totalDuration.toFixed(1)} 秒`, "info");
+          }
+
+          // 提取当前处理时间
+          const timeMatch = message.match(/time=(\d{2}:\d{2}:\d{2}\.\d+)/);
+          if (timeMatch) {
+            const current = parseTime(timeMatch[1]);
+            updateProgress(current);
+          }
+
+          // 只输出关键日志
+          if (message.includes("Duration") || message.includes("Output") || 
+              message.includes("video:") || message.includes("error") ||
+              message.includes("Invalid") || message.includes("cannot")) {
+            addLog(message);
+          }
+        });
+
+        // 设置进度回调
+        ffmpeg.setProgress(({ ratio }) => {
+          // ratio 是 0-1 的数值
+          if (totalDuration === 0 && ratio > 0 && ratio < 1) {
+            const percent = Math.round(ratio * 100);
+            progressBar.style.width = `${percent}%`;
+            progressText.textContent = `${percent}%`;
+          }
+        });
+
+        // 加载内核，指定本地路径
+        await ffmpeg.load({
+          corePath: "./core/ffmpeg-core.js"
+        });
+
+        addLog("FFmpeg 内核加载成功！", "success");
+        addLog("可以开始选择文件进行合并了", "success");
+        
+        startBtn.disabled = false;
+        startBtn.textContent = "🚀 开始合并音视频";
+
+      } catch (err) {
+        addLog(`内核加载失败: ${err.message}`, "error");
+        addLog("请确保 core 文件夹与 HTML 文件在同一目录", "error");
+        addLog("建议使用本地 HTTP 服务打开（python -m http.server）", "error");
+        startBtn.textContent = "内核加载失败，请检查文件路径";
+      }
+    }
+
+    // 文件选择处理
+    videoInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        if (!file.name.toLowerCase().endsWith(".mp4")) {
+          addLog("请选择 MP4 格式的视频文件", "error");
+          return;
+        }
+        videoFile = file;
+        videoName.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+        videoStatus.textContent = "已选择";
+        videoStatus.className = "status-badge status-ready";
+        addLog(`已选择视频: ${file.name}`, "info");
+      }
+    });
+
+    audioInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        if (!file.name.toLowerCase().endsWith(".mp3")) {
+          addLog("请选择 MP3 格式的音频文件", "error");
+          return;
+        }
+        audioFile = file;
+        audioName.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+        audioStatus.textContent = "已选择";
+        audioStatus.className = "status-badge status-ready";
+        addLog(`已选择音频: ${file.name}`, "info");
+      }
+    });
+
+    // 合并按钮点击事件
+    startBtn.addEventListener("click", async () => {
+      if (isProcessing) return;
+      
+      if (!videoFile || !audioFile) {
+        addLog("请先选择视频和音频文件！", "error");
+        return;
+      }
+
+      isProcessing = true;
+      startBtn.disabled = true;
+      startBtn.textContent = "⏳ 合并处理中...";
+      resetProgress();
+
+      addLog("=================== 开始合并 ===================", "info");
+
+      try {
+        // 写入视频文件到虚拟文件系统
+        addLog("正在写入视频文件到虚拟内存...", "info");
+        ffmpeg.FS("writeFile", "input_video.mp4", await fetchFile(videoFile));
+
+        // 写入音频文件到虚拟文件系统
+        addLog("正在写入音频文件到虚拟内存...", "info");
+        ffmpeg.FS("writeFile", "input_audio.mp3", await fetchFile(audioFile));
+
+        // 执行合并命令
+        addLog("开始执行 FFmpeg 合并命令...", "info");
+        await ffmpeg.run(
+          "-i", "input_video.mp4",
+          "-i", "input_audio.mp3",
+          "-c:v", "copy",
+          "-c:a", "aac",
+          "-b:a", "192k",
+          "-map", "0:v",
+          "-map", "1:a",
+          "-shortest",
+          "-y",
+          "output.mp4"
+        );
+
+        addLog("FFmpeg 处理完成，正在读取输出文件...", "success");
+
+        // 读取输出文件
+        const data = ffmpeg.FS("readFile", "output.mp4");
+        const blob = new Blob([data.buffer], { type: "video/mp4" });
+        const url = URL.createObjectURL(blob);
+
+        // 自动下载
+        const a = document.createElement("a");
+        a.href = url;
+        const baseName = videoFile.name.replace(/\.mp4$/i, "");
+        a.download = `${baseName}_合并成品.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        progressBar.style.width = "100%";
+        progressText.textContent = "100% 完成！";
+        addLog("✅ 合并成功！文件已自动下载", "success");
+        addLog(`输出文件大小: ${(data.length / 1024 / 1024).toFixed(2)} MB`, "success");
+
+        // 清理虚拟文件
+        try {
+          ffmpeg.FS("unlink", "input_video.mp4");
+          ffmpeg.FS("unlink", "input_audio.mp3");
+          ffmpeg.FS("unlink", "output.mp4");
+        } catch (e) {
+          // 忽略清理错误
+        }
+
+      } catch (err) {
+        addLog(`合并失败: ${err.message}`, "error");
+        addLog("可能原因：视频编码不支持、文件损坏、或浏览器内存不足", "error");
+      }
+
+      isProcessing = false;
+      startBtn.disabled = false;
+      startBtn.textContent = "🚀 开始合并音视频";
+    });
+
+    // 初始化拖拽
+    setupDragDrop("videoDrop", "videoInput", "video");
+    setupDragDrop("audioDrop", "audioInput", "audio");
+
+    // 页面加载完成后自动加载 FFmpeg
+    window.addEventListener("load", () => {
+      setTimeout(loadFFmpeg, 500);
+    });
+  </script>
+</body>
+</html>
