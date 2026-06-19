@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -330,7 +331,7 @@
   </div>
 
   <!-- FFmpeg WASM 核心库（本地文件） -->
-  <script src="./hebin/core/ffmpeg.min.js"></script>
+  <script src="/hebin/core/ffmpeg.min.js"></script>
 
   <script>
     const { createFFmpeg, fetchFile } = FFmpeg;
@@ -411,8 +412,8 @@
 
     // 加载 FFmpeg 内核
     async function loadFFmpeg() {
-      addLog("正在加载本地 FFmpeg WASM 内核...", "info");
-      addLog("内核文件位于同目录 core 文件夹中", "info");
+      addLog("正在加载 FFmpeg WASM 内核...", "info");
+      addLog("内核路径: /hebin/core/", "info");
 
       try {
         // 设置日志回调
@@ -451,7 +452,7 @@
 
         // 加载内核，指定本地路径
         await ffmpeg.load({
-          corePath: "./hebin/core/ffmpeg-core.js"
+          corePath: "/hebin/core/ffmpeg-core.js"
         });
 
         addLog("FFmpeg 内核加载成功！", "success");
